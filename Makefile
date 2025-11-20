@@ -22,8 +22,8 @@ HOST_CFLAGS = -Wall -O2
 all: pwm_generator.hex 
 
 # AVR embedded program
-pwm_generator.elf: pwm_generator.c
-	$(CC) $(CFLAGS) -o $@ $<
+pwm_generator.elf: pwm_generator.c pid.c
+	$(CC) $(CFLAGS) -o $@ $^
 
 pwm_generator.hex: pwm_generator.elf
 	$(OBJCOPY) -O ihex $< $@

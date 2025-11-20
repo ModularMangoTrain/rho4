@@ -21,6 +21,7 @@ Author: Shabd Shrivastava
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include "debug.h"
+#include "pid.h"
 
 #define F_CPU 12000000UL
 #define BUFFSIZE 50
@@ -30,6 +31,8 @@ volatile uint16_t pwm_frequency = 1000;  // Default 1kHz
 volatile uint8_t pwm_duty = 50;          // Default 50%
 volatile uint8_t pwm_enabled = 0;
 volatile uint8_t continuous_sampling = 0; // Continuous ADC sampling flag
+PID_Controller matto;
+volatile uint8_t pid_enabled = 0;
 
 // Function declarations
 void update_pwm(void);
@@ -45,44 +48,39 @@ void init_pwm(void) {
 
 void update_pwm(void) {
     if (pwm_enabled) {
-        // Variable frequency PWM using ICR1 as TOP
         uint32_t top_value = (F_CPU / (uint32_t)pwm_frequency) - 1;
-        uint8_t prescaler;
         
-        printf("[DEBUG] Target freq: %d Hz\n", pwm_frequency);
-        printf("[DEBUG] Initial TOP: %lu\n", top_value);
+        if (!pid_enabled) {
+            printf("[DEBUG] Target freq: %d Hz\n", pwm_frequency);
+            printf("[DEBUG] Initial TOP: %lu\n", top_value);
+        }
         
-        // Select appropriate prescaler
         if (top_value <= 65535UL) {
-
-            prescaler = 1;
-            TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);  // Prescaler = 1
-            printf("[DEBUG] Using prescaler: 1\n");
+            TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
+            if (!pid_enabled) printf("[DEBUG] Using prescaler: 1\n");
         } else {
             top_value = (F_CPU / (8UL * pwm_frequency)) - 1;
-            prescaler = 8;
-            TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS11);  // Prescaler = 8
-            printf("[DEBUG] Using prescaler: 8\n");
-            printf("[DEBUG] Adjusted TOP: %lu\n", top_value);
+            TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS11);
+            if (!pid_enabled) {
+                printf("[DEBUG] Using prescaler: 8\n");
+                printf("[DEBUG] Adjusted TOP: %lu\n", top_value);
+            }
         }
         
         ICR1 = top_value;
-        OCR1A = ((uint32_t)top_value * pwm_duty) / 100;  // Set duty cycle
-        TCCR1A = _BV(COM1A1) | _BV(WGM11);  // Fast PWM mode 14, clear on match
+        OCR1A = ((uint32_t)top_value * pwm_duty) / 100;
+        TCCR1A = _BV(COM1A1) | _BV(WGM11);
         
-        printf("[DEBUG] ICR1 (TOP): %u\n", ICR1);
-        printf("[DEBUG] OCR1A (duty): %u\n", OCR1A);
-        printf("[DEBUG] TCCR1A: 0x%02X\n", TCCR1A);
-        printf("[DEBUG] TCCR1B: 0x%02X\n", TCCR1B);
-        
-        uint32_t actual_freq = F_CPU / ((uint32_t)ICR1 + 1);
-        if (prescaler == 8) actual_freq /= 8;
-        printf("[DEBUG] Actual freq: %lu Hz\n", actual_freq);
+        if (!pid_enabled) {
+            printf("[DEBUG] ICR1 (TOP): %u\n", ICR1);
+            printf("[DEBUG] OCR1A (duty): %u\n", OCR1A);
+            printf("[DEBUG] TCCR1A: 0x%02X\n", TCCR1A);
+            printf("[DEBUG] TCCR1B: 0x%02X\n", TCCR1B);
+        }
     } else {
-        printf("[DEBUG] PWM disabled\n");
-        TCCR1A = 0;  // Disable PWM
-        TCCR1B = 0;  // Stop timer
-        PORTD &= ~_BV(PD5);  // Set output low
+        TCCR1A = 0;
+        TCCR1B = 0;
+        PORTD &= ~_BV(PD5);
     }
 }
 
@@ -155,9 +153,13 @@ void process_command(char *cmd, int param) {
             break;
             
         case 'M':  // Start continuous monitoring
-            continuous_sampling = 1;
-            printf("Continuous sampling started\n");
-            ADCSRA |= _BV(ADSC);  // Start first conversion
+            if (!pid_enabled) {
+                continuous_sampling = 1;
+                printf("Continuous sampling started\n");
+                ADCSRA |= _BV(ADSC);  // Start first conversion
+            } else {
+                printf("Cannot start sampling while PID is active\n");
+            }
             break;
             
         case 'N':  // Stop continuous monitoring
@@ -187,6 +189,24 @@ void process_command(char *cmd, int param) {
                 printf("  Actual Freq: %lu Hz\n", actual_freq);
             }
             break;
+        case 'P':  // Enable PID
+            continuous_sampling = 0;  // Stop continuous sampling
+            pid_enabled = 1;
+            pwm_enabled = 1;
+            pid_reset(&matto);
+            printf("PID enabled\n");
+            break;
+            
+        case 'Q':  // Disable PID
+            pid_enabled = 0;
+            printf("PID disabled\n");
+            break;
+            
+        case 'V':  // Set setpoint
+            matto.setpoint = param;
+            printf("Setpoint: %d\n", param);
+            break;
+
             
         default:
             printf("Unknown command. Available:\n");
@@ -197,6 +217,10 @@ void process_command(char *cmd, int param) {
             printf("  R         - Read ADC once\n");
             printf("  M         - Start continuous sampling\n");
             printf("  N         - Stop continuous sampling\n");
+            printf("  P         - Enable PID\n");
+            printf("  Q         - Disable PID\n");
+            printf("  V <setpt> - Set PID setpoint\n");
+            printf("  X         - Toggle test pin PD5\n");
             printf("  I         - Show info\n");
             break;
     }
@@ -210,6 +234,8 @@ int main(void) {
     init_debug_uart0();
     init_pwm();
     init_adc();
+    pid_init(&matto, 0.1, 0.02, 0.02, 512);
+
     
     printf("PWM Generator Ready\n");
     printf("Connect PWM output (PD5) to ADC input (PA0)\n");
@@ -227,7 +253,14 @@ int main(void) {
         } else {
             scanf("%*s");  // Clear input buffer
         }
+        
+        if (pid_enabled) {
+            pwm_duty = pid_compute(&matto, read_adc(), pwm_duty);
+            update_pwm();
+            _delay_ms(50);
+        }
     }
+
     
     return 0;
 }
