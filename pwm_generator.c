@@ -92,12 +92,11 @@ void init_adc(void) {
 ISR(ADC_vect) {
     uint16_t adc_val = ADC;
 
-    //allows pid to run in continuous sampling without being incapable of reading adc due to the interrupt
     if (pid_enabled) {
         pwm_duty = pid_compute(&matto, adc_val, pwm_duty);
         update_pwm();
-        _delay_ms(10);  // 10ms = 100Hz sampling
-        ADCSRA |= _BV(ADSC);  // Start next conversion
+        _delay_ms(10);
+        ADCSRA |= _BV(ADSC);
     }
 
     // ADC conversion complete
@@ -208,7 +207,6 @@ void process_command(char *cmd, int param) {
             matto.setpoint = param;
             printf("Setpoint: %d\n", param);
             break;
-
             
         default:
             printf("Unknown command. Available:\n");
@@ -237,6 +235,8 @@ int main(void) {
     init_pwm();
     init_adc();
     pid_init(&matto, 0.1, 0.02, 0.02, 512);
+    //pid_init(&matto, 0.08, 0.05, 0.004, 512)
+    
 
     
     printf("PWM Generator Ready\n");

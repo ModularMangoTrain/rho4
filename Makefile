@@ -13,6 +13,7 @@ CC = avr-gcc
 OBJCOPY = avr-objcopy
 AVRDUDE = avrdude
 CFLAGS = -mmcu=$(MCU) -DF_CPU=$(F_CPU) -Wall -Os -std=c99
+LDFLAGS = -Wl,-u,vfprintf -lprintf_flt -lm
 
 # Host compiler (Windows/Linux)
 HOST_CC = gcc
