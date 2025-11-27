@@ -6,6 +6,7 @@ void pid_init(PID_Controller *pid, float kp, float ki, float kd, uint16_t setpoi
     pid->kd = kd;
     pid->setpoint = setpoint;
     pid->integral = 0;
+    pid->differential = 0;
     pid->prev_error = 0;
     pid->output_min = 0;
     pid->output_max = 100;
@@ -14,11 +15,13 @@ void pid_init(PID_Controller *pid, float kp, float ki, float kd, uint16_t setpoi
 uint8_t pid_compute(PID_Controller *pid, uint16_t input, uint8_t current_duty) {
     int16_t error = pid->setpoint - input;
     
-    pid->integral += error * 0.01;
+    pid->integral = pid->integral + pid->ki * 0.1 / 2 * (error + pid->prev_error);
     if (pid->integral > 100) pid->integral = 100;
     if (pid->integral < -100) pid->integral = -100;
+
+    pid->differential = (2*pid->kd)/(2*0.2+0.1) * (error - pid->prev_error) + (2*0.2 - 0.1) / (2*0.2 + 0.1) * pid->differential;
     
-    float output = pid->kp * error + pid->ki * pid->integral + pid->kd * (error - pid->prev_error);
+    float output = pid->kp * error + pid->integral + pid->differential;
     pid->prev_error = error;
     
     // Rate limiting: max ±10% change per update

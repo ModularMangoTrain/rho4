@@ -1,8 +1,4 @@
 /*****************************************************************
-
-High-quality PWM generator for Il-Matto that accepts serial commands
-and outputs corresponding PWM waves for ADC measurement.
-
 Commands:
 - F <frequency>  : Set PWM frequency (1-5000 Hz)
 - D <duty>       : Set duty cycle (0-100%)
@@ -94,9 +90,18 @@ void init_adc(void) {
 }
 
 ISR(ADC_vect) {
+    uint16_t adc_val = ADC;
+
+    //allows pid to run in continuous sampling without being incapable of reading adc due to the interrupt
+    if (pid_enabled) {
+        pwm_duty = pid_compute(&matto, adc_val, pwm_duty);
+        update_pwm();
+        _delay_ms(10);  // 10ms = 100Hz sampling
+        ADCSRA |= _BV(ADSC);  // Start next conversion
+    }
+
     // ADC conversion complete
     if (continuous_sampling) {
-        uint16_t adc_val = ADC;
         uint16_t millivolts = (adc_val * 3300UL) / 1024;
         printf("ADC: %d (%u.%02uV)\n", adc_val, millivolts/1000, (millivolts%1000)/10);
         _delay_ms(100);  // 100ms between samples
@@ -153,13 +158,9 @@ void process_command(char *cmd, int param) {
             break;
             
         case 'M':  // Start continuous monitoring
-            if (!pid_enabled) {
                 continuous_sampling = 1;
                 printf("Continuous sampling started\n");
                 ADCSRA |= _BV(ADSC);  // Start first conversion
-            } else {
-                printf("Cannot start sampling while PID is active\n");
-            }
             break;
             
         case 'N':  // Stop continuous monitoring
@@ -195,6 +196,7 @@ void process_command(char *cmd, int param) {
             pwm_enabled = 1;
             pid_reset(&matto);
             printf("PID enabled\n");
+            ADCSRA |= _BV(ADSC);  // Start first conversion
             break;
             
         case 'Q':  // Disable PID
@@ -252,12 +254,6 @@ int main(void) {
             process_command(cmd, param);
         } else {
             scanf("%*s");  // Clear input buffer
-        }
-        
-        if (pid_enabled) {
-            pwm_duty = pid_compute(&matto, read_adc(), pwm_duty);
-            update_pwm();
-            _delay_ms(50);
         }
     }
 

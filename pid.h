@@ -9,6 +9,7 @@ typedef struct {
     float kd;
     uint16_t setpoint;
     float integral;
+    float differential;
     int16_t prev_error;
     uint8_t output_min;
     uint8_t output_max;
