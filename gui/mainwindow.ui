@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>800</width><height>600</height></rect>
+  </property>
+  <property name="windowTitle">
+   <string>PWM PID Controller</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout">
+    <item>
+     <widget class="QGroupBox" name="pwmGroup">
+      <property name="title"><string>PWM Control</string></property>
+      <layout class="QGridLayout">
+       <item row="0" column="0"><widget class="QLabel"><property name="text"><string>Frequency (Hz):</string></property></widget></item>
+       <item row="0" column="1"><widget class="QSpinBox" name="freqSpin"><property name="maximum"><number>5000</number></property><property name="value"><number>1000</number></property></widget></item>
+       <item row="0" column="2"><widget class="QPushButton" name="setFreqBtn"><property name="text"><string>Set</string></property></widget></item>
+       <item row="1" column="0"><widget class="QLabel"><property name="text"><string>Duty Cycle (%):</string></property></widget></item>
+       <item row="1" column="1"><widget class="QSpinBox" name="dutySpin"><property name="maximum"><number>100</number></property><property name="value"><number>50</number></property></widget></item>
+       <item row="1" column="2"><widget class="QPushButton" name="setDutyBtn"><property name="text"><string>Set</string></property></widget></item>
+       <item row="2" column="0"><widget class="QPushButton" name="startPWMBtn"><property name="text"><string>Start PWM</string></property></widget></item>
+       <item row="2" column="1"><widget class="QPushButton" name="stopPWMBtn"><property name="text"><string>Stop PWM</string></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="adcGroup">
+      <property name="title"><string>ADC Monitoring</string></property>
+      <layout class="QHBoxLayout">
+       <item><widget class="QPushButton" name="readADCBtn"><property name="text"><string>Read ADC</string></property></widget></item>
+       <item><widget class="QPushButton" name="startMonitorBtn"><property name="text"><string>Start Monitor</string></property></widget></item>
+       <item><widget class="QPushButton" name="stopMonitorBtn"><property name="text"><string>Stop Monitor</string></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="pidGroup">
+      <property name="title"><string>PID Control</string></property>
+      <layout class="QGridLayout">
+       <item row="0" column="0"><widget class="QLabel"><property name="text"><string>Setpoint (ADC):</string></property></widget></item>
+       <item row="0" column="1"><widget class="QSpinBox" name="setpointSpin"><property name="maximum"><number>1023</number></property><property name="value"><number>100</number></property></widget></item>
+       <item row="0" column="2"><widget class="QPushButton" name="setSetpointBtn"><property name="text"><string>Set</string></property></widget></item>
+       <item row="1" column="0"><widget class="QPushButton" name="enablePIDBtn"><property name="text"><string>Enable PID</string></property></widget></item>
+       <item row="1" column="1"><widget class="QPushButton" name="disablePIDBtn"><property name="text"><string>Disable PID</string></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="showScopeBtn">
+      <property name="text"><string>Show Oscilloscope</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="terminalGroup">
+      <property name="title"><string>Terminal Output</string></property>
+      <layout class="QVBoxLayout">
+       <item><widget class="QPlainTextEdit" name="terminalText"><property name="readOnly"><bool>true</bool></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+
+ <resources/>
+ <connections/>
+</ui>

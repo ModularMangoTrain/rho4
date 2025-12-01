@@ -89,22 +89,26 @@ void init_adc(void) {
     sei();  // Enable global interrupts
 }
 
+volatile uint8_t sample_counter = 0;
+
 ISR(ADC_vect) {
     uint16_t adc_val = ADC;
 
     if (pid_enabled) {
-        pwm_duty = pid_compute(&matto, adc_val, pwm_duty);
-        update_pwm();
-        _delay_ms(10);
+        sample_counter++;
+        if (sample_counter >= 5) {  // 5ms at ~1ms ADC conversion
+            sample_counter = 0;
+            pwm_duty = pid_compute(&matto, adc_val, pwm_duty);
+            update_pwm();
+        }
         ADCSRA |= _BV(ADSC);
     }
 
-    // ADC conversion complete
     if (continuous_sampling) {
         uint16_t millivolts = (adc_val * 3300UL) / 1024;
         printf("ADC: %d (%u.%02uV)\n", adc_val, millivolts/1000, (millivolts%1000)/10);
-        _delay_ms(100);  // 100ms between samples
-        ADCSRA |= _BV(ADSC);  // Start next conversion
+        _delay_ms(100);
+        ADCSRA |= _BV(ADSC);
     }
 }
 
@@ -193,6 +197,7 @@ void process_command(char *cmd, int param) {
             continuous_sampling = 0;  // Stop continuous sampling
             pid_enabled = 1;
             pwm_enabled = 1;
+            pwm_duty = (matto.setpoint * 100) / 1023;  // Initialize duty from setpoint
             pid_reset(&matto);
             printf("PID enabled\n");
             ADCSRA |= _BV(ADSC);  // Start first conversion
@@ -229,13 +234,11 @@ void process_command(char *cmd, int param) {
 int main(void) {
     char cmd[BUFFSIZE];
     int param;
-    int res;
     
     init_debug_uart0();
     init_pwm();
     init_adc();
-    pid_init(&matto, 0.1, 0.02, 0.02, 512);
-    //pid_init(&matto, 0.08, 0.05, 0.004, 512)
+    pid_init(&matto, 0.08, 0.015, 0.0, 100);
     
 
     
@@ -244,16 +247,12 @@ int main(void) {
     printf("Type 'I' for commands\n");
     
     while (1) {
-        res = scanf("%s %d", cmd, &param);
-        
-        if (res == 1) {
-            // Single command without parameter
-            process_command(cmd, 0);
-        } else if (res == 2) {
-            // Command with parameter
-            process_command(cmd, param);
-        } else {
-            scanf("%*s");  // Clear input buffer
+        if (scanf("%s", cmd) == 1) {
+            if (scanf("%d", &param) == 1) {
+                process_command(cmd, param);
+            } else {
+                process_command(cmd, 0);
+            }
         }
     }
 

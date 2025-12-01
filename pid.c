@@ -12,27 +12,29 @@ void pid_init(PID_Controller *pid, float kp, float ki, float kd, uint16_t setpoi
     pid->output_max = 100;
 }
 
+#define PID_SAMPLE_TIME 0.005f  // 5ms in seconds
+
 uint8_t pid_compute(PID_Controller *pid, uint16_t input, uint8_t current_duty) {
     int16_t error = pid->setpoint - input;
+    float Ts = PID_SAMPLE_TIME;
     
-    pid->integral = pid->integral + pid->ki * 0.1 / 2 * (error + pid->prev_error);
-    if (pid->integral > 100) pid->integral = 100;
-    if (pid->integral < -100) pid->integral = -100;
-
-    pid->differential = (2*pid->kd)/(2*0.2+0.1) * (error - pid->prev_error) + (2*0.2 - 0.1) / (2*0.2 + 0.1) * pid->differential;
+    float output = pid->kp * error + pid->integral;
+    int result = current_duty + (int)output;
     
-    float output = pid->kp * error + pid->integral + pid->differential;
+    int result_sat = result;
+    if (result_sat > pid->output_max) result_sat = pid->output_max;
+    if (result_sat < pid->output_min) result_sat = pid->output_min;
+    
+    if (result_sat == result) {
+        pid->integral += pid->ki * error;
+    }
+    
+    if (pid->integral > 20) pid->integral = 20;
+    if (pid->integral < -20) pid->integral = -20;
+    
     pid->prev_error = error;
     
-    // Rate limiting: max ±10% change per update
-    if (output > 10.0) output = 10.0;
-    if (output < -10.0) output = -10.0;
-    
-    int result = current_duty + (int)output;
-    if (result > pid->output_max) result = pid->output_max;
-    if (result < pid->output_min) result = pid->output_min;
-    
-    return (uint8_t)result;
+    return (uint8_t)result_sat;
 }
 
 void pid_reset(PID_Controller *pid) {
