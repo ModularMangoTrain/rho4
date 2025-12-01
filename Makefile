@@ -24,7 +24,7 @@ all: pwm_generator.hex
 
 # AVR embedded program
 pwm_generator.elf: pwm_generator.c pid.c
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 pwm_generator.hex: pwm_generator.elf
 	$(OBJCOPY) -O ihex $< $@

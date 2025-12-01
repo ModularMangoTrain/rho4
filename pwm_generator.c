@@ -89,33 +89,51 @@ void init_adc(void) {
     sei();  // Enable global interrupts
 }
 
+
+#include <util/atomic.h>
+
+volatile uint16_t latest_adc = 0;
 volatile uint8_t sample_counter = 0;
+volatile uint32_t adc_accumulator = 0;
+volatile uint8_t adc_avg_counter = 0;
 
 ISR(ADC_vect) {
-    uint16_t adc_val = ADC;
-
-    if (pid_enabled) {
-        sample_counter++;
-        if (sample_counter >= 5) {  // 5ms at ~1ms ADC conversion
-            sample_counter = 0;
-            pwm_duty = pid_compute(&matto, adc_val, pwm_duty);
-            update_pwm();
+    uint16_t raw_adc = ADC;
+    
+    // Software averaging
+    adc_accumulator += raw_adc;
+    adc_avg_counter++;
+    
+    if (adc_avg_counter >= 100) {
+        latest_adc = (uint16_t)(adc_accumulator / 100);
+        adc_accumulator = 0;
+        adc_avg_counter = 0;
+        
+        // Run PID after each averaged sample
+        if (pid_enabled) {
+            sample_counter++;
+            if (sample_counter >= 3) {  // 3 * 100 samples * 70µs ≈ 21ms
+                sample_counter = 0;
+                pwm_duty = pid_compute(&matto, latest_adc, pwm_duty);
+                update_pwm();
+            }
         }
-        ADCSRA |= _BV(ADSC);
     }
 
-    if (continuous_sampling) {
-        uint16_t millivolts = (adc_val * 3300UL) / 1024;
-        printf("ADC: %d (%u.%02uV)\n", adc_val, millivolts/1000, (millivolts%1000)/10);
-        _delay_ms(100);
+    if (pid_enabled || continuous_sampling) {
         ADCSRA |= _BV(ADSC);
     }
 }
 
+
 uint16_t read_adc(void) {
-    ADCSRA |= _BV(ADSC);  // Start conversion
-    while (ADCSRA & _BV(ADSC));  // Wait for completion
-    return ADC;  // Return 10-bit result
+    uint16_t result;
+    cli();
+    ADCSRA |= _BV(ADSC);
+    while (ADCSRA & _BV(ADSC));
+    result = ADC;
+    sei();
+    return result;
 }
 
 void process_command(char *cmd, int param) {
@@ -161,6 +179,8 @@ void process_command(char *cmd, int param) {
             break;
             
         case 'M':  // Start continuous monitoring
+                pid_enabled = 0;
+                sample_counter = 0;
                 continuous_sampling = 1;
                 printf("Continuous sampling started\n");
                 ADCSRA |= _BV(ADSC);  // Start first conversion
@@ -194,13 +214,14 @@ void process_command(char *cmd, int param) {
             }
             break;
         case 'P':  // Enable PID
-            continuous_sampling = 0;  // Stop continuous sampling
+            continuous_sampling = 0;
             pid_enabled = 1;
             pwm_enabled = 1;
-            pwm_duty = (matto.setpoint * 100) / 1023;  // Initialize duty from setpoint
+            pwm_duty = (matto.setpoint * 100UL) / 1023;
             pid_reset(&matto);
+            matto.integral = pwm_duty;
             printf("PID enabled\n");
-            ADCSRA |= _BV(ADSC);  // Start first conversion
+            ADCSRA |= _BV(ADSC);
             break;
             
         case 'Q':  // Disable PID
@@ -238,7 +259,7 @@ int main(void) {
     init_debug_uart0();
     init_pwm();
     init_adc();
-    pid_init(&matto, 0.08, 0.015, 0.0, 100);
+    pid_init(&matto, 0.05, 0.01, 0.0, 512);
     
 
     
@@ -247,13 +268,27 @@ int main(void) {
     printf("Type 'I' for commands\n");
     
     while (1) {
-        if (scanf("%s", cmd) == 1) {
+    // Handle continuous sampling display
+    if (continuous_sampling) {
+        uint16_t adc_copy;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) { // Had to read up on this, it ensures safe access so nothing gets corrupted
+            adc_copy = latest_adc;
+        }
+        uint16_t millivolts = (adc_copy * 3300UL) / 1024;
+        printf("ADC: %d (%u.%02uV)\n", adc_copy, millivolts/1000, (millivolts%1000)/10);
+        _delay_ms(100);
+    }
+    
+    // Command processing (non-blocking check)
+    if (UCSR0A & _BV(RXC0)) {
+        if (scanf("%49s", cmd) == 1) {
             if (scanf("%d", &param) == 1) {
                 process_command(cmd, param);
             } else {
                 process_command(cmd, 0);
             }
         }
+    }
     }
 
     

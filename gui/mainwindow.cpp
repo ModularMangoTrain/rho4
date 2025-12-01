@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QPushButton>
+#include <QDebug>
 
 MainWindow::MainWindow(QSerialPort *serialPort, QWidget *parent)
     : QMainWindow(parent)
@@ -120,11 +121,16 @@ void MainWindow::parseAndPlotADC(const QString &line)
     QString trimmed = line.trimmed();
     if (!trimmed.startsWith("ADC:")) return;
     
-    QRegularExpression re("^ADC: (\\d+)");
+    // Require full format: "ADC: ### (#.##V)"
+    QRegularExpression re("^ADC:\\s+(\\d+)\\s+\\(.*V\\)");
     QRegularExpressionMatch match = re.match(trimmed);
     if (match.hasMatch() && scopeWindow) {
-        int adcValue = match.captured(1).toInt();
-        scopeWindow->addDataPoint(adcValue);
+        bool ok;
+        int adcValue = match.captured(1).toInt(&ok);
+        // Filter out spurious zeros and validate range
+        if (ok && adcValue > 0 && adcValue <= 1023) {
+            scopeWindow->addDataPoint(adcValue);
+        }
     }
 }
 

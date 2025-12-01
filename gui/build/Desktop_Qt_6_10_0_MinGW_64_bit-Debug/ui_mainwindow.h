@@ -37,8 +37,9 @@ public:
     QLabel *label1;
     QSpinBox *dutySpin;
     QPushButton *setDutyBtn;
-    QPushButton *startPWMBtn;
     QPushButton *stopPWMBtn;
+    QPushButton *startPWMBtn;
+    QLabel *label_3;
     QGroupBox *adcGroup;
     QHBoxLayout *hboxLayout;
     QPushButton *readADCBtn;
@@ -49,8 +50,9 @@ public:
     QLabel *label2;
     QSpinBox *setpointSpin;
     QPushButton *setSetpointBtn;
-    QPushButton *enablePIDBtn;
     QPushButton *disablePIDBtn;
+    QPushButton *enablePIDBtn;
+    QLabel *label_2;
     QPushButton *showScopeBtn;
     QGroupBox *terminalGroup;
     QVBoxLayout *vboxLayout1;
@@ -103,15 +105,20 @@ public:
 
         gridLayout->addWidget(setDutyBtn, 1, 2, 1, 1);
 
-        startPWMBtn = new QPushButton(pwmGroup);
-        startPWMBtn->setObjectName("startPWMBtn");
-
-        gridLayout->addWidget(startPWMBtn, 2, 0, 1, 1);
-
         stopPWMBtn = new QPushButton(pwmGroup);
         stopPWMBtn->setObjectName("stopPWMBtn");
 
-        gridLayout->addWidget(stopPWMBtn, 2, 1, 1, 1);
+        gridLayout->addWidget(stopPWMBtn, 2, 2, 1, 1);
+
+        startPWMBtn = new QPushButton(pwmGroup);
+        startPWMBtn->setObjectName("startPWMBtn");
+
+        gridLayout->addWidget(startPWMBtn, 2, 1, 1, 1);
+
+        label_3 = new QLabel(pwmGroup);
+        label_3->setObjectName("label_3");
+
+        gridLayout->addWidget(label_3, 2, 0, 1, 1);
 
 
         vboxLayout->addWidget(pwmGroup);
@@ -159,15 +166,20 @@ public:
 
         gridLayout1->addWidget(setSetpointBtn, 0, 2, 1, 1);
 
-        enablePIDBtn = new QPushButton(pidGroup);
-        enablePIDBtn->setObjectName("enablePIDBtn");
-
-        gridLayout1->addWidget(enablePIDBtn, 1, 0, 1, 1);
-
         disablePIDBtn = new QPushButton(pidGroup);
         disablePIDBtn->setObjectName("disablePIDBtn");
 
-        gridLayout1->addWidget(disablePIDBtn, 1, 1, 1, 1);
+        gridLayout1->addWidget(disablePIDBtn, 1, 2, 1, 1);
+
+        enablePIDBtn = new QPushButton(pidGroup);
+        enablePIDBtn->setObjectName("enablePIDBtn");
+
+        gridLayout1->addWidget(enablePIDBtn, 1, 1, 1, 1);
+
+        label_2 = new QLabel(pidGroup);
+        label_2->setObjectName("label_2");
+
+        gridLayout1->addWidget(label_2, 1, 0, 1, 1);
 
 
         vboxLayout->addWidget(pidGroup);
@@ -205,8 +217,9 @@ public:
         setFreqBtn->setText(QCoreApplication::translate("MainWindow", "Set", nullptr));
         label1->setText(QCoreApplication::translate("MainWindow", "Duty Cycle (%):", nullptr));
         setDutyBtn->setText(QCoreApplication::translate("MainWindow", "Set", nullptr));
-        startPWMBtn->setText(QCoreApplication::translate("MainWindow", "Start PWM", nullptr));
         stopPWMBtn->setText(QCoreApplication::translate("MainWindow", "Stop PWM", nullptr));
+        startPWMBtn->setText(QCoreApplication::translate("MainWindow", "Start PWM", nullptr));
+        label_3->setText(QCoreApplication::translate("MainWindow", "Enable/Disable PWM", nullptr));
         adcGroup->setTitle(QCoreApplication::translate("MainWindow", "ADC Monitoring", nullptr));
         readADCBtn->setText(QCoreApplication::translate("MainWindow", "Read ADC", nullptr));
         startMonitorBtn->setText(QCoreApplication::translate("MainWindow", "Start Monitor", nullptr));
@@ -214,8 +227,9 @@ public:
         pidGroup->setTitle(QCoreApplication::translate("MainWindow", "PID Control", nullptr));
         label2->setText(QCoreApplication::translate("MainWindow", "Setpoint (ADC):", nullptr));
         setSetpointBtn->setText(QCoreApplication::translate("MainWindow", "Set", nullptr));
-        enablePIDBtn->setText(QCoreApplication::translate("MainWindow", "Enable PID", nullptr));
         disablePIDBtn->setText(QCoreApplication::translate("MainWindow", "Disable PID", nullptr));
+        enablePIDBtn->setText(QCoreApplication::translate("MainWindow", "Enable PID", nullptr));
+        label_2->setText(QCoreApplication::translate("MainWindow", "Enable/Disable PID", nullptr));
         showScopeBtn->setText(QCoreApplication::translate("MainWindow", "Show Oscilloscope", nullptr));
         terminalGroup->setTitle(QCoreApplication::translate("MainWindow", "Terminal Output", nullptr));
     } // retranslateUi
