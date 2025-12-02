@@ -16,6 +16,7 @@ Author: Shabd Shrivastava
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
+#include <util/atomic.h>
 #include "debug.h"
 #include "pid.h"
 
@@ -90,7 +91,6 @@ void init_adc(void) {
 }
 
 
-#include <util/atomic.h>
 
 volatile uint16_t latest_adc = 0;
 volatile uint8_t sample_counter = 0;
@@ -112,7 +112,7 @@ ISR(ADC_vect) {
         // Run PID after each averaged sample
         if (pid_enabled) {
             sample_counter++;
-            if (sample_counter >= 3) {  // 3 * 100 samples * 70µs ≈ 21ms
+            if (sample_counter >= 30) {  // 30 * 100 samples * 70µs ≈ 210ms
                 sample_counter = 0;
                 pwm_duty = pid_compute(&matto, latest_adc, pwm_duty);
                 update_pwm();
@@ -276,7 +276,7 @@ int main(void) {
         }
         uint16_t millivolts = (adc_copy * 3300UL) / 1024;
         printf("ADC: %d (%u.%02uV)\n", adc_copy, millivolts/1000, (millivolts%1000)/10);
-        _delay_ms(100);
+        _delay_ms(20);
     }
     
     // Command processing (non-blocking check)

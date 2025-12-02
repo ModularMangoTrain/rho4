@@ -14,8 +14,17 @@ MainWindow::MainWindow(QSerialPort *serialPort, QWidget *parent)
 {
     ui->setupUi(this);
     serial->setParent(this);
+    setWindowTitle("PWM Controller");
+    setMinimumSize(600, 500);
+    
+    QFont font = this->font();
+    font.setPointSize(10);
+    setFont(font);
+    
+    ui->terminalText->setStyleSheet("QPlainTextEdit { font-family: 'Consolas', 'Courier New', monospace; }");
     
     // Connect signals
+    
     connect(ui->startPWMBtn, &QPushButton::clicked, this, &MainWindow::onStartPWM);
     connect(ui->stopPWMBtn, &QPushButton::clicked, this, &MainWindow::onStopPWM);
     connect(ui->readADCBtn, &QPushButton::clicked, this, &MainWindow::onReadADC);
@@ -121,8 +130,8 @@ void MainWindow::parseAndPlotADC(const QString &line)
     QString trimmed = line.trimmed();
     if (!trimmed.startsWith("ADC:")) return;
     
-    // Require full format: "ADC: ### (#.##V)"
-    QRegularExpression re("^ADC:\\s+(\\d+)\\s+\\(.*V\\)");
+    // Match: "ADC: ### (anything)"
+    QRegularExpression re("^ADC:\\s+(\\d+)\\s+\\(");
     QRegularExpressionMatch match = re.match(trimmed);
     if (match.hasMatch() && scopeWindow) {
         bool ok;

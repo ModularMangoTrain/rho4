@@ -9,6 +9,9 @@ SOURCES += \
     connectiondialog.cpp \
     scopewindow.cpp
 
+RESOURCES += \
+    QDarkStyleSheet/qdarkstyle/dark/darkstyle.qrc
+
 HEADERS += \
     mainwindow.h \
     connectiondialog.h \
