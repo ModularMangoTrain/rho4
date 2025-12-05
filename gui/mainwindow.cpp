@@ -144,7 +144,7 @@ void MainWindow::parseAndPlotADC(const QString &line)
     if (!trimmed.startsWith("ADC:")) return;
     
     // Match: "ADC: ### (anything)"
-    QRegularExpression re("^ADC:\\s+(\\d+)\\s+\\("); //rejects anything that dosent have ADC: on the line
+    QRegularExpression re("^ADC:\\s+(\\d+)\\s+\\("); // Rejects lines without ADC: prefix
     QRegularExpressionMatch match = re.match(trimmed);
     if (match.hasMatch()) {
         bool ok;

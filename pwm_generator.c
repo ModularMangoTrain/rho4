@@ -333,7 +333,7 @@ int main(void) {
     // Handle continuous sampling display
     if (continuous_sampling) {
         uint16_t adc_copy;
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) { // Had to read up on this, it ensures safe access so nothing gets corrupted
             adc_copy = latest_adc;
         }
         uint16_t millivolts = (adc_copy * 3300UL) / 1024;
