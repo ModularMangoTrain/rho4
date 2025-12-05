@@ -10,7 +10,8 @@ AVR-based PWM generator with closed-loop PID control and Qt GUI interface.
 
 ## Build
 ```bash
-make
+make all
+make upload
 ```
 
 ## Embedded Features
