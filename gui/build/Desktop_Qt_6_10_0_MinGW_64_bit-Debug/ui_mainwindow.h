@@ -41,6 +41,8 @@ public:
     QPushButton *startPWMBtn;
     QLabel *label_3;
     QGroupBox *adcGroup;
+    QVBoxLayout *vboxLayout1;
+    QLabel *voltageLabel;
     QHBoxLayout *hboxLayout;
     QPushButton *readADCBtn;
     QPushButton *startMonitorBtn;
@@ -53,9 +55,11 @@ public:
     QPushButton *disablePIDBtn;
     QPushButton *enablePIDBtn;
     QLabel *label_2;
+    QHBoxLayout *hboxLayout1;
     QPushButton *showScopeBtn;
+    QPushButton *drawTrajectoryBtn;
     QGroupBox *terminalGroup;
-    QVBoxLayout *vboxLayout1;
+    QVBoxLayout *vboxLayout2;
     QPlainTextEdit *terminalText;
 
     void setupUi(QMainWindow *MainWindow)
@@ -125,7 +129,15 @@ public:
 
         adcGroup = new QGroupBox(centralwidget);
         adcGroup->setObjectName("adcGroup");
-        hboxLayout = new QHBoxLayout(adcGroup);
+        vboxLayout1 = new QVBoxLayout(adcGroup);
+        vboxLayout1->setObjectName("vboxLayout1");
+        voltageLabel = new QLabel(adcGroup);
+        voltageLabel->setObjectName("voltageLabel");
+        voltageLabel->setAlignment(Qt::AlignCenter);
+
+        vboxLayout1->addWidget(voltageLabel);
+
+        hboxLayout = new QHBoxLayout();
         hboxLayout->setObjectName("hboxLayout");
         readADCBtn = new QPushButton(adcGroup);
         readADCBtn->setObjectName("readADCBtn");
@@ -141,6 +153,9 @@ public:
         stopMonitorBtn->setObjectName("stopMonitorBtn");
 
         hboxLayout->addWidget(stopMonitorBtn);
+
+
+        vboxLayout1->addLayout(hboxLayout);
 
 
         vboxLayout->addWidget(adcGroup);
@@ -184,20 +199,30 @@ public:
 
         vboxLayout->addWidget(pidGroup);
 
+        hboxLayout1 = new QHBoxLayout();
+        hboxLayout1->setObjectName("hboxLayout1");
         showScopeBtn = new QPushButton(centralwidget);
         showScopeBtn->setObjectName("showScopeBtn");
 
-        vboxLayout->addWidget(showScopeBtn);
+        hboxLayout1->addWidget(showScopeBtn);
+
+        drawTrajectoryBtn = new QPushButton(centralwidget);
+        drawTrajectoryBtn->setObjectName("drawTrajectoryBtn");
+
+        hboxLayout1->addWidget(drawTrajectoryBtn);
+
+
+        vboxLayout->addLayout(hboxLayout1);
 
         terminalGroup = new QGroupBox(centralwidget);
         terminalGroup->setObjectName("terminalGroup");
-        vboxLayout1 = new QVBoxLayout(terminalGroup);
-        vboxLayout1->setObjectName("vboxLayout1");
+        vboxLayout2 = new QVBoxLayout(terminalGroup);
+        vboxLayout2->setObjectName("vboxLayout2");
         terminalText = new QPlainTextEdit(terminalGroup);
         terminalText->setObjectName("terminalText");
         terminalText->setReadOnly(true);
 
-        vboxLayout1->addWidget(terminalText);
+        vboxLayout2->addWidget(terminalText);
 
 
         vboxLayout->addWidget(terminalGroup);
@@ -221,6 +246,7 @@ public:
         startPWMBtn->setText(QCoreApplication::translate("MainWindow", "Start PWM", nullptr));
         label_3->setText(QCoreApplication::translate("MainWindow", "Enable/Disable PWM", nullptr));
         adcGroup->setTitle(QCoreApplication::translate("MainWindow", "ADC Monitoring", nullptr));
+        voltageLabel->setText(QCoreApplication::translate("MainWindow", "<span style='font-size:24pt; font-weight:bold; color:#00BCD4;'>--- V</span>", nullptr));
         readADCBtn->setText(QCoreApplication::translate("MainWindow", "Read ADC", nullptr));
         startMonitorBtn->setText(QCoreApplication::translate("MainWindow", "Start Monitor", nullptr));
         stopMonitorBtn->setText(QCoreApplication::translate("MainWindow", "Stop Monitor", nullptr));
@@ -231,6 +257,7 @@ public:
         enablePIDBtn->setText(QCoreApplication::translate("MainWindow", "Enable PID", nullptr));
         label_2->setText(QCoreApplication::translate("MainWindow", "Enable/Disable PID", nullptr));
         showScopeBtn->setText(QCoreApplication::translate("MainWindow", "Show Oscilloscope", nullptr));
+        drawTrajectoryBtn->setText(QCoreApplication::translate("MainWindow", "Draw Trajectory", nullptr));
         terminalGroup->setTitle(QCoreApplication::translate("MainWindow", "Terminal Output", nullptr));
     } // retranslateUi
 

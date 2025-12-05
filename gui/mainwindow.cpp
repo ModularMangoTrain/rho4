@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "trajectorywindow.h"
 #include <QSerialPortInfo>
 #include <QMessageBox>
 #include <QRegularExpression>
@@ -11,6 +12,7 @@ MainWindow::MainWindow(QSerialPort *serialPort, QWidget *parent)
     , ui(new Ui::MainWindow)
     , serial(serialPort)
     , scopeWindow(nullptr)
+    , trajectoryWindow(nullptr)
 {
     ui->setupUi(this);
     serial->setParent(this);
@@ -36,6 +38,7 @@ MainWindow::MainWindow(QSerialPort *serialPort, QWidget *parent)
     connect(ui->setDutyBtn, &QPushButton::clicked, this, &MainWindow::onSetDuty);
     connect(ui->setSetpointBtn, &QPushButton::clicked, this, &MainWindow::onSetSetpoint);
     connect(ui->showScopeBtn, &QPushButton::clicked, this, &MainWindow::onShowScope);
+    connect(ui->drawTrajectoryBtn, &QPushButton::clicked, this, &MainWindow::onShowTrajectory);
     connect(serial, &QSerialPort::readyRead, this, &MainWindow::readSerialData);
 }
 
@@ -125,22 +128,42 @@ void MainWindow::onShowScope()
     scopeWindow->activateWindow();
 }
 
+void MainWindow::onShowTrajectory()
+{
+    if (!trajectoryWindow) {
+        trajectoryWindow = new TrajectoryWindow(serial);
+    }
+    trajectoryWindow->show();
+    trajectoryWindow->raise();
+    trajectoryWindow->activateWindow();
+}
+
 void MainWindow::parseAndPlotADC(const QString &line)
 {
     QString trimmed = line.trimmed();
     if (!trimmed.startsWith("ADC:")) return;
     
     // Match: "ADC: ### (anything)"
-    QRegularExpression re("^ADC:\\s+(\\d+)\\s+\\(");
+    QRegularExpression re("^ADC:\\s+(\\d+)\\s+\\("); //rejects anything that dosent have ADC: on the line
     QRegularExpressionMatch match = re.match(trimmed);
-    if (match.hasMatch() && scopeWindow) {
+    if (match.hasMatch()) {
         bool ok;
         int adcValue = match.captured(1).toInt(&ok);
         // Filter out spurious zeros and validate range
         if (ok && adcValue > 0 && adcValue <= 1023) {
-            scopeWindow->addDataPoint(adcValue);
+            updateVoltageDisplay(adcValue);
+            if (scopeWindow) {
+                scopeWindow->addDataPoint(adcValue);
+            }
         }
     }
+}
+
+void MainWindow::updateVoltageDisplay(int adcValue)
+{
+    double voltage = (adcValue * 3.3) / 1024.0;
+    QString voltageText = QString("<span style='font-size:24pt; font-weight:bold; color:#00BCD4;'>%1 V</span>").arg(voltage, 0, 'f', 3);
+    ui->voltageLabel->setText(voltageText);
 }
 
 void MainWindow::sendCommand(const QString &cmd)

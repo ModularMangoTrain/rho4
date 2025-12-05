@@ -7,7 +7,8 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     connectiondialog.cpp \
-    scopewindow.cpp
+    scopewindow.cpp \
+    trajectorywindow.cpp
 
 RESOURCES += \
     QDarkStyleSheet/qdarkstyle/dark/darkstyle.qrc
@@ -15,7 +16,8 @@ RESOURCES += \
 HEADERS += \
     mainwindow.h \
     connectiondialog.h \
-    scopewindow.h
+    scopewindow.h \
+    trajectorywindow.h
 
 FORMS += \
     mainwindow.ui \

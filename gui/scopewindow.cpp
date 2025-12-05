@@ -23,7 +23,7 @@ ScopeWindow::ScopeWindow(QWidget *parent)
     chart->setPlotAreaBackgroundBrush(QBrush(QColor(35, 45, 55)));
     chart->setPlotAreaBackgroundVisible(true);
     chart->setMargins(QMargins(0, 0, 0, 0));
-    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->setAnimationOptions(QChart::NoAnimation);
     
     axisX = new QValueAxis();
     axisX->setTitleText("Time (s)");

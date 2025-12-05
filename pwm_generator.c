@@ -22,6 +22,7 @@ Author: Shabd Shrivastava
 
 #define F_CPU 12000000UL
 #define BUFFSIZE 50
+#define MAX_TRAJECTORY 200
 
 // PWM configuration
 volatile uint16_t pwm_frequency = 1000;  // Default 1kHz
@@ -30,6 +31,12 @@ volatile uint8_t pwm_enabled = 0;
 volatile uint8_t continuous_sampling = 0; // Continuous ADC sampling flag
 PID_Controller matto;
 volatile uint8_t pid_enabled = 0;
+
+// Trajectory tracking
+volatile uint16_t trajectory[MAX_TRAJECTORY];
+volatile uint8_t trajectory_length = 0;
+volatile uint8_t trajectory_index = 0;
+volatile uint8_t trajectory_mode = 0;
 
 // Function declarations
 void update_pwm(void);
@@ -112,8 +119,15 @@ ISR(ADC_vect) {
         // Run PID after each averaged sample
         if (pid_enabled) {
             sample_counter++;
-            if (sample_counter >= 30) {  // 30 * 100 samples * 70µs ≈ 210ms
+            if (sample_counter >= 3) {  // 3 * 100 samples * 70us ≈ 21ms
                 sample_counter = 0;
+                
+                // Update setpoint if in trajectory mode
+                if (trajectory_mode && trajectory_length > 0) {
+                    matto.setpoint = trajectory[trajectory_index];
+                    trajectory_index = (trajectory_index + 1) % trajectory_length;
+                }
+                
                 pwm_duty = pid_compute(&matto, latest_adc, pwm_duty);
                 update_pwm();
             }
@@ -218,8 +232,8 @@ void process_command(char *cmd, int param) {
             pid_enabled = 1;
             pwm_enabled = 1;
             pwm_duty = (matto.setpoint * 100UL) / 1023;
-            pid_reset(&matto);
             matto.integral = pwm_duty;
+            matto.prev_error = 0;
             printf("PID enabled\n");
             ADCSRA |= _BV(ADSC);
             break;
@@ -230,8 +244,51 @@ void process_command(char *cmd, int param) {
             break;
             
         case 'V':  // Set setpoint
-            matto.setpoint = param;
-            printf("Setpoint: %d\n", param);
+            if (param >= 0 && param <= 1023) {
+                cli();
+                matto.setpoint = param;
+                matto.prev_error = 0;
+                matto.integral = pwm_duty;
+                trajectory_mode = 0;  // Disable trajectory when manually setting
+                sei();
+                printf("Setpoint: %d\n", matto.setpoint);
+            } else {
+                printf("Error: Setpoint must be 0-1023\n");
+            }
+            break;
+            
+        case 'W':  // Start trajectory (W for waveform)
+            trajectory_mode = 1;
+            trajectory_index = 0;
+            printf("Trajectory: %d points loaded\n", trajectory_length);
+            break;
+            
+        case 'E':  // End trajectory mode
+            trajectory_mode = 0;
+            printf("Trajectory mode disabled\n");
+            break;
+            
+        case 'A':  // Add trajectory point (A for add)
+            if (param >= 0 && param <= 1023 && trajectory_length < MAX_TRAJECTORY) {
+                trajectory[trajectory_length++] = param;
+                printf(".");  // Simple ACK
+            }
+            break;
+            
+        case 'C':  // Clear trajectory
+            trajectory_length = 0;
+            trajectory_index = 0;
+            trajectory_mode = 0;
+            printf("Trajectory cleared\n");
+            break;
+            
+        case 'Z':  // Reset/stop everything
+            pid_enabled = 0;
+            continuous_sampling = 0;
+            pwm_enabled = 0;
+            trajectory_mode = 0;
+            update_pwm();
+            printf("System reset\n");
             break;
             
         default:
@@ -246,6 +303,10 @@ void process_command(char *cmd, int param) {
             printf("  P         - Enable PID\n");
             printf("  Q         - Disable PID\n");
             printf("  V <setpt> - Set PID setpoint\n");
+            printf("  A <value> - Add trajectory point\n");
+            printf("  W         - Start trajectory tracking\n");
+            printf("  E         - End trajectory tracking\n");
+            printf("  C         - Clear trajectory\n");
             printf("  X         - Toggle test pin PD5\n");
             printf("  I         - Show info\n");
             break;
@@ -255,6 +316,7 @@ void process_command(char *cmd, int param) {
 int main(void) {
     char cmd[BUFFSIZE];
     int param;
+    static uint8_t cmd_idx = 0;
     
     init_debug_uart0();
     init_pwm();
@@ -271,22 +333,44 @@ int main(void) {
     // Handle continuous sampling display
     if (continuous_sampling) {
         uint16_t adc_copy;
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) { // Had to read up on this, it ensures safe access so nothing gets corrupted
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
             adc_copy = latest_adc;
         }
         uint16_t millivolts = (adc_copy * 3300UL) / 1024;
         printf("ADC: %d (%u.%02uV)\n", adc_copy, millivolts/1000, (millivolts%1000)/10);
-        _delay_ms(20);
+        _delay_ms(50);
+    } else if (pid_enabled) {
+        uint16_t adc_copy;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            adc_copy = latest_adc;
+        }
+        uint16_t millivolts = (adc_copy * 3300UL) / 1024;
+        printf("ADC: %d (%u.%02uV)\n", adc_copy, millivolts/1000, (millivolts%1000)/10);
+        _delay_ms(50);
     }
     
-    // Command processing (non-blocking check)
-    if (UCSR0A & _BV(RXC0)) {
-        if (scanf("%49s", cmd) == 1) {
-            if (scanf("%d", &param) == 1) {
+    // Command processing (non-blocking check) - read all available chars
+    while (UCSR0A & _BV(RXC0)) {
+        char c = UDR0;
+        if (c == '\n') {
+            if (cmd_idx > 0 && cmd[0] >= 'A' && cmd[0] <= 'Z') {
+                cmd[cmd_idx] = '\0';
+                char *numStart = cmd + 1;
+                while (*numStart == ' ' || *numStart == '\t') numStart++;
+                param = atoi(numStart);
                 process_command(cmd, param);
-            } else {
-                process_command(cmd, 0);
             }
+            cmd_idx = 0;
+        } else if (c == '\r') {
+            // Ignore
+        } else if (c >= ' ' && c <= '~') {
+            if (cmd_idx < BUFFSIZE - 1) {
+                cmd[cmd_idx++] = c;
+            } else {
+                cmd_idx = 0;
+            }
+        } else {
+            cmd_idx = 0;  // Reset on invalid char
         }
     }
     }

@@ -12,7 +12,7 @@ void pid_init(PID_Controller *pid, float kp, float ki, float kd, uint16_t setpoi
     pid->output_max = 100;
 }
 
-#define PID_SAMPLE_TIME 0.021f  // 21ms in seconds
+#define PID_SAMPLE_TIME 0.21f  // 210ms in seconds
 
 uint8_t pid_compute(PID_Controller *pid, uint16_t input, uint8_t current_duty) {
     int16_t error = pid->setpoint - input;
